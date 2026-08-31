@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    background-color: transparent;
+  }
+}
+
+/* Scrollbar estilizada */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(9, 9, 11, 0.8);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(220, 38, 38, 0.4);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 38, 38, 0.8);
+}
+
+/* Transições dinâmicas */
+.cutin-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efeito de Scanlines CRT para Ordem Paranormal / Horror */
+.crt-scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.4) 50%
+  ), 
+  linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 4px, 6px 100%;
+}
+
+/* Granulação Analógica / Ruído de Filme */
+.film-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+}
+
+/* Vinheta de Horror */
+.vignette-overlay {
+  background: radial-gradient(circle, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+/* Recorte Chanfrado Angular Estilo Persona / Cut-in */
+.clip-cutin-left {
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
+}
+
+.clip-cutin-right {
+  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.clip-tape {
+  clip-path: polygon(4% 0%, 100% 0%, 96% 100%, 0% 100%);
+}
+
+.clip-badge {
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%);
+}
+
+/* Glitch sutil ao ativar orador */
+@keyframes glitchShake {
+  0% { transform: scale(1.06) skewX(-6deg) translate(0); }
+  20% { transform: scale(1.08) skewX(-7deg) translate(-2px, 1px); }
+  40% { transform: scale(1.06) skewX(-5deg) translate(2px, -1px); }
+  60% { transform: scale(1.07) skewX(-6deg) translate(-1px, 2px); }
+  80% { transform: scale(1.06) skewX(-6deg) translate(1px, 0); }
+  100% { transform: scale(1.06) skewX(-6deg) translate(0); }
+}
+
+.animate-glitch-pop {
+  animation: glitchShake 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
