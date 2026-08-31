@@ -17,17 +17,17 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
   onToggle,
   totalStageCount,
 }) => {
-  const dominantColor = useImageColor(npc.avatarUrl, npc.accentColor || '#e11d48');
+  const dominantColor = useImageColor(npc.avatarUrl, npc.accentColor || '#ea580c');
 
-  // Limite horizontal para quando há apenas 1 personagem em cena
-  const singleCharMaxWidth = totalStageCount === 1 ? '520px' : undefined;
+  // Limite horizontal quando há apenas 1 personagem em cena
+  const singleCharMaxWidth = totalStageCount === 1 ? '480px' : undefined;
 
   const activeSpriteFilter = [
     'grayscale(0%)',
-    `drop-shadow(0 0 28px ${dominantColor}cc)`,
-    `drop-shadow(0 0 55px ${dominantColor}55)`,
-    'drop-shadow(6px 6px 0px rgba(0,0,0,0.9))',
-    'brightness(1.08)',
+    `drop-shadow(0 0 30px ${dominantColor}cc)`,
+    `drop-shadow(0 0 60px ${dominantColor}55)`,
+    'drop-shadow(6px 6px 0px rgba(0,0,0,0.85))',
+    'brightness(1.10)',
   ].join(' ');
 
   return (
@@ -36,76 +36,57 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
       role="button"
       tabIndex={0}
       aria-label={`${npc.name} - Atalho: ${npc.shortcutKey}`}
-      className={`group relative h-screen flex-1 min-w-0 cursor-pointer select-none ${
+      className={`group relative h-screen flex-1 min-w-0 cursor-pointer select-none flex items-center justify-center ${
         isActive ? 'z-30' : 'z-10 hover:z-20'
       }`}
       style={{ maxWidth: singleCharMaxWidth }}
     >
-      {/* ── FUNDO DO POLÍGONO ──────────────────────────────────────────────
-          Sempre recortado. Muda de sutil → vibrante/opaco quando ativo.
-      ─────────────────────────────────────────────────────────────────── */}
+      {/* ── 1. POLÍGONO DE FUNDO ── */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           clipPath: 'polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)',
-          // Ativo: 100% opaco com cor forte. Inativo: leve tint semi-transparente
+          // Ativo: 100% OPACO e vibrante exatamente como na referência. Inativo: leve sugestão translúcida
           background: isActive
-            ? `linear-gradient(to bottom, ${dominantColor} 0%, ${dominantColor}cc 30%, rgba(9,9,11,0.97) 100%)`
-            : `linear-gradient(to bottom, ${dominantColor}30 0%, ${dominantColor}15 55%, transparent 100%)`,
-          transition: 'background 350ms ease',
+            ? `linear-gradient(to bottom, ${dominantColor} 0%, ${dominantColor}f0 40%, ${dominantColor}dd 100%)`
+            : `linear-gradient(to bottom, ${dominantColor}35 0%, ${dominantColor}18 50%, transparent 100%)`,
+          boxShadow: isActive ? `0 0 40px ${dominantColor}99` : 'none',
+          transition: 'background 200ms ease, box-shadow 200ms ease',
         }}
       >
-        {/* Linhas diagonais de velocidade quando ativo */}
+        {/* Linhas diagonais de ação no estilo Persona quando ativo */}
         <div
-          className="absolute inset-0 transition-opacity duration-300"
+          className="absolute inset-0 pointer-events-none transition-opacity duration-200"
           style={{
             opacity: isActive ? 1 : 0,
-            background: 'repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.06) 20px, rgba(255,255,255,0.06) 40px)'
+            background: 'repeating-linear-gradient(45deg, transparent, transparent 18px, rgba(255,255,255,0.08) 18px, rgba(255,255,255,0.08) 36px)',
           }}
         />
       </div>
 
-      {/* ── IMAGEM ÚNICA DO PERSONAGEM ─────────────────────────────────────
-          Uma única <img> que:
-          - Ocupa sempre os mesmos bounds (inset: 0)
-          - Quando inativo: clipped ao polígono via clip-path no wrapper, object-cover, P&B
-          - Quando ativo: clip removido (sem animação de clip), escala sobe suavemente,
-            filtro muda para colorido — NENHUMA mudança de tamanho/posição do wrapper
-          O clip-path muda INSTANTANEAMENTE (0ms) para evitar o efeito de encolher/crescer.
-      ─────────────────────────────────────────────────────────────────── */}
+      {/* ── 2. IMAGEM PREENCHENDO 100% DO POLÍGONO (OBJECT-COVER) ── */}
       <div
-        className="absolute flex items-end justify-center pointer-events-none"
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
         style={{
-          // Vertical: sempre ocupa a tela inteira (inset y = 0)
-          top: 0,
-          bottom: 0,
-          // Horizontal: inativo = dentro da coluna, ativo = expande lateralmente
-          // para que o object-contain mostre a imagem inteira sem recorte
-          left: isActive ? '-35%' : '0',
-          right: isActive ? '-35%' : '0',
+          // Inativo: o corte acompanha exatamente o polígono
+          // Ativo: corte removido para vazar além dos limites (efeito break-out)
           clipPath: isActive ? 'none' : 'polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)',
-          transition: 'none', // clip-path e dimensões mudam instantaneamente
-          overflow: 'visible',
           zIndex: isActive ? 20 : 10,
         }}
       >
         <img
           src={npc.avatarUrl}
           alt={npc.name}
-          className="w-full h-full select-none"
+          className="w-full h-full select-none pointer-events-none"
           style={{
-            objectFit: isActive ? 'contain' : 'cover',
-            objectPosition: isActive ? 'center bottom' : 'top center',
-            // Escala sutil: 1.0 (inativo) → 1.06 (ativo). Origem no topo para manter cabeça estática.
-            transform: isActive ? 'scale(1.06)' : 'scale(1.0)',
-            transformOrigin: 'bottom center',
-            // Filtro anima suavemente: P&B escuro → colorido com glow
-            filter: isActive
-              ? activeSpriteFilter
-              : 'grayscale(100%) brightness(0.7)',
-            opacity: isActive ? 1 : 0.5,
-            // Transição APENAS de filter/opacity/transform — sem mudança de layout
-            transition: 'filter 280ms ease, opacity 280ms ease, transform 320ms ease',
+            objectFit: 'cover',
+            objectPosition: 'center 30%',
+            // Preenche todo o polígono e salta para fora ao ativar
+            transform: isActive ? 'scale(1.14)' : 'scale(1.0)',
+            transformOrigin: 'center 40%',
+            filter: isActive ? activeSpriteFilter : 'grayscale(100%) brightness(0.7) contrast(1.05)',
+            opacity: isActive ? 1 : 0.45,
+            transition: 'filter 250ms ease, opacity 250ms ease, transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1)',
           }}
           loading="eager"
         />
