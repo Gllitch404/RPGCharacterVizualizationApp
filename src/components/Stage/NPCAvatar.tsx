@@ -74,11 +74,17 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
           O clip-path muda INSTANTANEAMENTE (0ms) para evitar o efeito de encolher/crescer.
       ─────────────────────────────────────────────────────────────────── */}
       <div
-        className="absolute inset-0 flex items-end justify-center pointer-events-none"
+        className="absolute flex items-end justify-center pointer-events-none"
         style={{
+          // Vertical: sempre ocupa a tela inteira (inset y = 0)
+          top: 0,
+          bottom: 0,
+          // Horizontal: inativo = dentro da coluna, ativo = expande lateralmente
+          // para que o object-contain mostre a imagem inteira sem recorte
+          left: isActive ? '-35%' : '0',
+          right: isActive ? '-35%' : '0',
           clipPath: isActive ? 'none' : 'polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%)',
-          // clip-path sem animação — troca instantânea evita o glitch de "encolher"
-          transition: 'none',
+          transition: 'none', // clip-path e dimensões mudam instantaneamente
           overflow: 'visible',
           zIndex: isActive ? 20 : 10,
         }}
@@ -88,11 +94,11 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
           alt={npc.name}
           className="w-full h-full select-none"
           style={{
-            objectFit: 'cover',
-            objectPosition: 'top center',
-            // Escala sutil: 1.0 (inativo) → 1.10 (ativo). Origem no topo para manter cabeça estática.
-            transform: isActive ? 'scale(1.10)' : 'scale(1.0)',
-            transformOrigin: 'top center',
+            objectFit: isActive ? 'contain' : 'cover',
+            objectPosition: isActive ? 'center bottom' : 'top center',
+            // Escala sutil: 1.0 (inativo) → 1.06 (ativo). Origem no topo para manter cabeça estática.
+            transform: isActive ? 'scale(1.06)' : 'scale(1.0)',
+            transformOrigin: 'bottom center',
             // Filtro anima suavemente: P&B escuro → colorido com glow
             filter: isActive
               ? activeSpriteFilter
