@@ -1,4 +1,4 @@
-# 🎭 RPG NPC Stream Overlay — Persona & Investigative Edition
+# 🎭 RPG NPC Stream Overlay — Persona & Investigative Edition (OUTDATED)
 
 > Um overlay de avatares com design dinâmico e angular inspirado na estética **Persona / Manga Cut-In** e presets temáticos para RPGs modernos de investigação e horror (**Ordem Paranormal**, **Call of Cthulhu** e **Clean Pop**).
 
