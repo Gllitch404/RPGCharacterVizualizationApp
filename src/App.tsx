@@ -1,14 +1,23 @@
 import { useState, useCallback } from 'react';
 import { useNPCState } from './hooks/useNPCState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useRoute } from './hooks/useRoute';
 import { Stage } from './components/Stage/Stage';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { QuickControls } from './components/UI/QuickControls';
 import { NPCFormModal } from './components/Sidebar/NPCFormModal';
 import { StreamDeckModal } from './components/UI/StreamDeckModal';
+import { ControlsPage } from './pages/ControlsPage';
 import { NPC } from './types';
+import { useSoundboardContext } from './context/SoundboardContext';
+import { saveCampaignToDisk } from './utils/campaignStorage';
 
 export function App() {
+  const { currentRoute, navigateTo } = useRoute();
+  const soundboard = useSoundboardContext();
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedTime, setLastSavedTime] = useState<number | null>(null);
+
   const {
     stageConfig,
     npcs,
@@ -16,13 +25,20 @@ export function App() {
     enableVignette,
     enableFilmGrain,
     enableScanlines,
+    enableBlur,
+    blurIntensity,
+    blurTarget,
     backgroundUrl,
     isTransparentBg,
+    hideStageControls,
     activeSpeakerId,
     setTheme,
     setEnableVignette,
     setEnableFilmGrain,
     setEnableScanlines,
+    setEnableBlur,
+    setBlurIntensity,
+    setBlurTarget,
     setBackgroundUrl,
     setIsTransparentBg,
     addNPC,
@@ -31,7 +47,19 @@ export function App() {
     toggleOnStage,
     toggleSpeaker,
     silenceAll,
-    resetToDefaults
+    resetToDefaults,
+    initiative,
+    nextTurn,
+    prevTurn,
+    setActiveTurnIndex,
+    toggleInitiativeVisibility,
+    addInitiativeItem,
+    removeInitiativeItem,
+    updateInitiativeItem,
+    reorderInitiative,
+    sortInitiativeByValue,
+    clearInitiative,
+    addNPCsToInitiative
   } = useNPCState();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -43,7 +71,7 @@ export function App() {
     setIsSidebarOpen(prev => !prev);
   }, []);
 
-  // Hook global de atalhos de teclado (0ms de latência)
+  // Hook global de atalhos de teclado no palco principal (0ms de latência)
   useKeyboardShortcuts({
     npcs,
     activeSpeakerId,
@@ -71,6 +99,49 @@ export function App() {
     }
   };
 
+  const handleSaveToDisk = useCallback(async () => {
+    setSaveStatus('saving');
+    const res = await saveCampaignToDisk({
+      npcs,
+      backgroundUrl,
+      theme,
+      enableVignette,
+      enableFilmGrain,
+      enableScanlines,
+      isTransparentBg,
+      hideStageControls,
+      tracks: soundboard.tracks,
+      soundboardConfig: soundboard.config,
+      initiative
+    });
+    if (res.success) {
+      setSaveStatus('saved');
+      setLastSavedTime(res.savedAt);
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } else {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 4000);
+    }
+  }, [
+    npcs,
+    backgroundUrl,
+    theme,
+    enableVignette,
+    enableFilmGrain,
+    enableScanlines,
+    isTransparentBg,
+    hideStageControls,
+    soundboard.tracks,
+    soundboard.config,
+    initiative
+  ]);
+
+  // ── SE ESTIVER NA ROTA DEDICADA DE CONTROLES (/controls ou #/controls) ──
+  if (currentRoute === 'controls') {
+    return <ControlsPage onOpenStage={(newTab) => navigateTo('stage', newTab)} />;
+  }
+
+  // ── ROTA PRINCIPAL DO PALCO / OVERLAY (/) ──────────────────────────────
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black text-zinc-100 select-none">
       {/* 1. Palco Principal de Visualização dos NPCs com Cut-In Angular */}
@@ -78,23 +149,32 @@ export function App() {
         stageConfig={stageConfig}
         toggleSpeaker={toggleSpeaker}
         onOpenSidebar={() => setIsSidebarOpen(true)}
+        onSelectTurn={setActiveTurnIndex}
+        onNextTurn={nextTurn}
+        onPrevTurn={prevTurn}
       />
 
-      {/* 2. Botão Flutuante de Controles */}
-      <QuickControls
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(true)}
-      />
+      {/* 2. Botão Flutuante de Controles (ocultado pelo Mestre se hideStageControls estiver ativo) */}
+      {!hideStageControls && (
+        <QuickControls
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={() => setIsSidebarOpen(true)}
+          onOpenControlsPage={() => navigateTo('controls', true)}
+        />
+      )}
 
       {/* 3. Painel Lateral de Gerenciamento (Gaveta Recolhível) */}
       <Sidebar
-        isOpen={isSidebarOpen}
+        isOpen={!hideStageControls && isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         npcs={npcs}
         theme={theme}
         enableVignette={enableVignette}
         enableFilmGrain={enableFilmGrain}
         enableScanlines={enableScanlines}
+        enableBlur={enableBlur}
+        blurIntensity={blurIntensity}
+        blurTarget={blurTarget}
         activeSpeakerId={activeSpeakerId}
         backgroundUrl={backgroundUrl}
         isTransparentBg={isTransparentBg}
@@ -102,6 +182,9 @@ export function App() {
         onSetEnableVignette={setEnableVignette}
         onSetEnableFilmGrain={setEnableFilmGrain}
         onSetEnableScanlines={setEnableScanlines}
+        onSetEnableBlur={setEnableBlur}
+        onSetBlurIntensity={setBlurIntensity}
+        onSetBlurTarget={setBlurTarget}
         onToggleSpeaker={toggleSpeaker}
         onToggleStage={toggleOnStage}
         onDeleteNPC={deleteNPC}
@@ -112,6 +195,21 @@ export function App() {
         onSetIsTransparentBg={setIsTransparentBg}
         onResetToDefaults={resetToDefaults}
         onOpenGuide={() => setIsGuideModalOpen(true)}
+        onSaveCampaign={handleSaveToDisk}
+        saveStatus={saveStatus}
+        lastSavedTime={lastSavedTime}
+        initiative={initiative}
+        onNextTurn={nextTurn}
+        onPrevTurn={prevTurn}
+        onSetActiveTurnIndex={setActiveTurnIndex}
+        onToggleInitiativeVisibility={toggleInitiativeVisibility}
+        onAddInitiativeItem={addInitiativeItem}
+        onRemoveInitiativeItem={removeInitiativeItem}
+        onUpdateInitiativeItem={updateInitiativeItem}
+        onReorderInitiative={reorderInitiative}
+        onSortInitiativeByValue={sortInitiativeByValue}
+        onClearInitiative={clearInitiative}
+        onAddNPCsToInitiative={addNPCsToInitiative}
       />
 
       {/* 4. Modal de Cadastro / Edição de NPC */}

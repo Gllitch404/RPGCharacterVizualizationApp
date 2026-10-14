@@ -19,14 +19,16 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
 }) => {
   const dominantColor = useImageColor(npc.avatarUrl, npc.accentColor || '#ea580c');
 
-  // Limite horizontal quando há apenas 1 personagem em cena
-  const singleCharMaxWidth = totalStageCount === 1 ? '480px' : undefined;
+  // Regra dos 4 slots: mantém largura de 4 NPCs mesmo com menos (1 a 4 NPCs),
+  // e só começa a comprimir para encaixar se houver 5 ou mais personagens em cena.
+  const effectiveSlots = Math.max(4, totalStageCount);
+  const slotWidthPercent = 100 / effectiveSlots;
 
   const activeSpriteFilter = [
     'grayscale(0%)',
     `drop-shadow(0 0 30px ${dominantColor}cc)`,
     `drop-shadow(0 0 60px ${dominantColor}55)`,
-    'drop-shadow(6px 6px 0px rgba(0,0,0,0.85))',
+    `drop-shadow(6px 6px 0px rgba(0,0,0,0.85))`,
     'brightness(1.10)',
   ].join(' ');
 
@@ -36,12 +38,17 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
       role="button"
       tabIndex={0}
       aria-label={`${npc.name} - Atalho: ${npc.shortcutKey}`}
-      className={`group relative h-screen flex-1 min-w-0 cursor-pointer select-none flex items-center justify-center ${
+      className={`group relative h-screen min-h-screen min-w-0 cursor-pointer select-none flex items-end justify-center ${
         isActive ? 'z-30' : 'z-10 hover:z-20'
       }`}
-      style={{ maxWidth: singleCharMaxWidth }}
+      style={{
+        width: `${slotWidthPercent}%`,
+        maxWidth: `${slotWidthPercent}%`,
+        flex: `0 0 ${slotWidthPercent}%`,
+        transition: 'width 250ms ease, max-width 250ms ease, flex-basis 250ms ease',
+      }}
     >
-      {/* ── 1. POLÍGONO DE FUNDO ── */}
+      {/* ── 1. POLÍGONO DE FUNDO (FITA COLORIDA DE PONTA A PONTA DA TELA) ── */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -64,9 +71,9 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
         />
       </div>
 
-      {/* ── 2. IMAGEM PREENCHENDO 100% DO POLÍGONO (OBJECT-COVER) ── */}
+      {/* ── 2. IMAGEM PREENCHENDO O POLÍGONO (ENQUADRAMENTO PRESERVADO) ── */}
       <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        className="absolute inset-0 flex items-end justify-center pointer-events-none"
         style={{
           // Inativo: o corte acompanha exatamente o polígono
           // Ativo: corte removido para vazar além dos limites (efeito break-out)
@@ -77,13 +84,13 @@ export const NPCAvatar: React.FC<NPCAvatarProps> = ({
         <img
           src={npc.avatarUrl}
           alt={npc.name}
-          className="w-full h-full select-none pointer-events-none"
+          className="w-full h-[88vh] sm:h-[90vh] shrink-0 select-none pointer-events-none"
           style={{
             objectFit: 'cover',
-            objectPosition: 'center 30%',
-            // Preenche todo o polígono e salta para fora ao ativar
-            transform: isActive ? 'scale(1.14)' : 'scale(1.0)',
-            transformOrigin: 'center 40%',
+            objectPosition: 'center 20%',
+            // Preenche o polígono e salta para fora ao ativar sem cortar cabeça no topo nem pés na base
+            transform: isActive ? 'scale(1.08)' : 'scale(1.0)',
+            transformOrigin: 'center bottom',
             filter: isActive ? activeSpriteFilter : 'grayscale(100%) brightness(0.7) contrast(1.05)',
             opacity: isActive ? 1 : 0.45,
             transition: 'filter 250ms ease, opacity 250ms ease, transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1)',

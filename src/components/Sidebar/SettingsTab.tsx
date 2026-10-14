@@ -1,6 +1,22 @@
 import React, { useRef } from 'react';
 import { StageTheme } from '../../types';
-import { Upload, RotateCcw, Monitor, Sparkles, Tv, Eye, Film } from 'lucide-react';
+import {
+  Upload,
+  RotateCcw,
+  Monitor,
+  Sparkles,
+  Tv,
+  Eye,
+  EyeOff,
+  Film,
+  Save,
+  Download,
+  HardDrive,
+  Check,
+  AlertCircle,
+  Clock,
+  Focus
+} from 'lucide-react';
 import { THEME_BACKGROUNDS } from '../../constants/initialData';
 
 interface SettingsTabProps {
@@ -8,15 +24,28 @@ interface SettingsTabProps {
   enableVignette: boolean;
   enableFilmGrain: boolean;
   enableScanlines: boolean;
+  enableBlur?: boolean;
+  blurIntensity?: number;
+  blurTarget?: 'background' | 'all';
   backgroundUrl: string;
   isTransparentBg: boolean;
+  hideStageControls?: boolean;
   onSetTheme: (theme: StageTheme) => void;
   onSetEnableVignette: (val: boolean) => void;
   onSetEnableFilmGrain: (val: boolean) => void;
   onSetEnableScanlines: (val: boolean) => void;
+  onSetEnableBlur?: (val: boolean) => void;
+  onSetBlurIntensity?: (val: number) => void;
+  onSetBlurTarget?: (val: 'background' | 'all') => void;
   onSetBackgroundUrl: (url: string) => void;
   onSetIsTransparentBg: (val: boolean) => void;
+  onSetHideStageControls?: (val: boolean) => void;
   onResetToDefaults: () => void;
+  onSaveCampaign?: () => void;
+  saveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  lastSavedTime?: number | null;
+  onExportCampaign?: () => void;
+  onImportCampaign?: () => void;
 }
 
 const THEMES: { id: StageTheme; name: string; desc: string; icon: string; badgeColor: string }[] = [
@@ -48,15 +77,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   enableVignette,
   enableFilmGrain,
   enableScanlines,
+  enableBlur = false,
+  blurIntensity = 8,
+  blurTarget = 'background',
   backgroundUrl,
   isTransparentBg,
+  hideStageControls,
   onSetTheme,
   onSetEnableVignette,
   onSetEnableFilmGrain,
   onSetEnableScanlines,
+  onSetEnableBlur,
+  onSetBlurIntensity,
+  onSetBlurTarget,
   onSetBackgroundUrl,
   onSetIsTransparentBg,
-  onResetToDefaults
+  onSetHideStageControls,
+  onResetToDefaults,
+  onSaveCampaign,
+  saveStatus = 'idle',
+  lastSavedTime,
+  onExportCampaign,
+  onImportCampaign
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,26 +200,123 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               className="w-4 h-4 text-red-600 rounded bg-zinc-900 border-zinc-700 focus:ring-red-500"
             />
           </label>
+
+          {/* Desfoque de Tela (Borrão / Blur Overlay) */}
+          <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-zinc-800/80 space-y-2.5 hover:border-zinc-700 transition-colors">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-2">
+                <Focus className="w-4 h-4 text-amber-400" />
+                <div>
+                  <span className="font-bold text-white text-xs block">Desfoque de Tela (Borrão / Blur)</span>
+                  <span className="text-[10px] text-zinc-500 block">Névoa, profundidade ou borrão cinemático</span>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={enableBlur}
+                onChange={e => onSetEnableBlur && onSetEnableBlur(e.target.checked)}
+                className="w-4 h-4 text-amber-500 rounded bg-zinc-900 border-zinc-700 focus:ring-amber-500 cursor-pointer"
+              />
+            </label>
+
+            {/* Ajustes quando o Desfoque está ativo */}
+            {enableBlur && (
+              <div className="pt-2 border-t border-zinc-800/80 space-y-2.5">
+                {/* Intensidade do Blur */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] font-mono">
+                    <span className="text-zinc-400">Intensidade:</span>
+                    <span className="text-amber-400 font-bold">{blurIntensity}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="2"
+                    max="24"
+                    step="2"
+                    value={blurIntensity}
+                    onChange={e => onSetBlurIntensity && onSetBlurIntensity(Number(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+                  />
+                  <div className="flex justify-between text-[9px] text-zinc-600 font-mono">
+                    <span>Suave (2px)</span>
+                    <span>Médio (8px)</span>
+                    <span>Forte (24px)</span>
+                  </div>
+                </div>
+
+                {/* Alvo do Borrão (Fundo vs Cena Toda) */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono text-zinc-400 block uppercase">Alvo do Desfoque:</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSetBlurTarget && onSetBlurTarget('background')}
+                      className={`px-2 py-1.5 rounded-lg text-[10px] font-bold font-mono transition-all border ${
+                        blurTarget === 'background'
+                          ? 'bg-amber-950/60 border-amber-500 text-amber-300 shadow-[1px_1px_0px_#000]'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      Apenas Fundo (Bokeh)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBlurTarget && onSetBlurTarget('all')}
+                      className={`px-2 py-1.5 rounded-lg text-[10px] font-bold font-mono transition-all border ${
+                        blurTarget === 'all'
+                          ? 'bg-amber-950/60 border-amber-500 text-amber-300 shadow-[1px_1px_0px_#000]'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      Cena Toda (Sonho)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* 3. Modo OBS / Transparência */}
-      <div className="p-4 rounded-xl bg-black border border-zinc-800 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Monitor className="w-4 h-4 text-sky-400" />
-            <span className="font-bold text-white">Fundo Transparente (OBS)</span>
+      <div className="p-4 rounded-xl bg-black border border-zinc-800 space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Monitor className="w-4 h-4 text-sky-400" />
+              <span className="font-bold text-white">Fundo Transparente (OBS)</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={isTransparentBg}
+              onChange={e => onSetIsTransparentBg(e.target.checked)}
+              className="w-4 h-4 text-sky-500 rounded bg-zinc-900 border-zinc-700 focus:ring-sky-500"
+            />
           </div>
-          <input
-            type="checkbox"
-            checked={isTransparentBg}
-            onChange={e => onSetIsTransparentBg(e.target.checked)}
-            className="w-4 h-4 text-sky-500 rounded bg-zinc-900 border-zinc-700 focus:ring-sky-500"
-          />
+          <p className="text-[11px] text-zinc-400 leading-relaxed">
+            Ative para usar como <strong>Browser Source</strong> transparente no OBS Studio diretamente sobre seu mapa ou jogo.
+          </p>
         </div>
-        <p className="text-[11px] text-zinc-400 leading-relaxed">
-          Ative para usar como <strong>Browser Source</strong> transparente no OBS Studio diretamente sobre seu mapa ou jogo.
-        </p>
+
+        {onSetHideStageControls && (
+          <div className="pt-3 border-t border-zinc-800/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <EyeOff className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-white">Ocultar Botões no Palco</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={hideStageControls || false}
+                onChange={e => onSetHideStageControls(e.target.checked)}
+                className="w-4 h-4 text-amber-500 rounded bg-zinc-900 border-zinc-700 focus:ring-amber-500"
+              />
+            </div>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Esconde todos os botões flutuantes de comando na tela principal do Palco, deixando a transmissão 100% limpa.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 4. Cenário de Fundo (Se não transparente) */}
@@ -235,7 +374,90 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
       )}
 
-      {/* 5. Reset */}
+      {/* 5. Gerenciamento de Campanha & Backup em Disco */}
+      {onSaveCampaign && (
+        <div className="pt-4 border-t border-zinc-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="font-black text-white uppercase tracking-wider text-xs flex items-center gap-1.5">
+              <HardDrive className="w-3.5 h-3.5 text-red-500" />
+              <span>PERSISTÊNCIA EM DISCO</span>
+            </label>
+            {lastSavedTime && (
+              <span className="text-[10px] text-zinc-500 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {new Date(lastSavedTime).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+
+          <p className="text-[11px] text-zinc-400 leading-relaxed">
+            Salva permanentemente seus personagens, músicas do soundboard, presets e fundos no arquivo <code className="text-zinc-200 bg-zinc-900 px-1 py-0.5 rounded">campaign_state.json</code>. Ao fechar com Ctrl+C e rodar <code className="text-zinc-200 bg-zinc-900 px-1 py-0.5 rounded">iniciar.bat</code>, tudo será restaurado automaticamente.
+          </p>
+
+          <div className="space-y-2">
+            <button
+              onClick={onSaveCampaign}
+              disabled={saveStatus === 'saving'}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border font-bold text-xs uppercase tracking-wider transition-all shadow-[2px_2px_0px_#000] active:scale-95 ${
+                saveStatus === 'saved'
+                  ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
+                  : saveStatus === 'error'
+                  ? 'bg-red-950/80 border-red-500 text-red-300'
+                  : saveStatus === 'saving'
+                  ? 'bg-zinc-800 border-zinc-600 text-zinc-400 cursor-wait'
+                  : 'bg-red-600 hover:bg-red-500 border-red-500 text-white'
+              }`}
+            >
+              {saveStatus === 'saved' ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>SALVO COM SUCESSO NO DISCO!</span>
+                </>
+              ) : saveStatus === 'saving' ? (
+                <>
+                  <Save className="w-4 h-4 animate-spin text-zinc-400" />
+                  <span>SALVANDO CAMPANHA...</span>
+                </>
+              ) : saveStatus === 'error' ? (
+                <>
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <span>FALHA AO SALVAR</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>SALVAR ESTADO DA CAMPANHA</span>
+                </>
+              )}
+            </button>
+
+            <div className="grid grid-cols-2 gap-2">
+              {onExportCampaign && (
+                <button
+                  onClick={onExportCampaign}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white rounded-xl text-xs font-bold transition-all"
+                  title="Baixar arquivo JSON de backup"
+                >
+                  <Download className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>EXPORTAR .JSON</span>
+                </button>
+              )}
+              {onImportCampaign && (
+                <button
+                  onClick={onImportCampaign}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white rounded-xl text-xs font-bold transition-all"
+                  title="Restaurar de arquivo JSON"
+                >
+                  <Upload className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>IMPORTAR .JSON</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Reset */}
       <div className="pt-3 border-t border-zinc-800">
         <button
           onClick={() => {

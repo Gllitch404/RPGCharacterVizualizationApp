@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { NPC, StageTheme } from '../../types';
+import { NPC, StageTheme, InitiativeState, InitiativeItem } from '../../types';
 import { NPCCard } from './NPCCard';
 import { SettingsTab } from './SettingsTab';
+import { SoundboardTab } from '../Soundboard/SoundboardTab';
+import { InitiativeTab } from '../Initiative/InitiativeTab';
 import {
   Users,
   UserPlus,
@@ -11,7 +13,10 @@ import {
   ChevronLeft,
   Eye,
   EyeOff,
-  Flame
+  Flame,
+  ExternalLink,
+  Music,
+  Swords
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,6 +27,9 @@ interface SidebarProps {
   enableVignette: boolean;
   enableFilmGrain: boolean;
   enableScanlines: boolean;
+  enableBlur?: boolean;
+  blurIntensity?: number;
+  blurTarget?: 'background' | 'all';
   activeSpeakerId: string | null;
   backgroundUrl: string;
   isTransparentBg: boolean;
@@ -29,6 +37,9 @@ interface SidebarProps {
   onSetEnableVignette: (val: boolean) => void;
   onSetEnableFilmGrain: (val: boolean) => void;
   onSetEnableScanlines: (val: boolean) => void;
+  onSetEnableBlur?: (val: boolean) => void;
+  onSetBlurIntensity?: (val: number) => void;
+  onSetBlurTarget?: (val: 'background' | 'all') => void;
   onToggleSpeaker: (id: string) => void;
   onToggleStage: (id: string) => void;
   onDeleteNPC: (id: string) => void;
@@ -39,6 +50,21 @@ interface SidebarProps {
   onSetIsTransparentBg: (val: boolean) => void;
   onResetToDefaults: () => void;
   onOpenGuide: () => void;
+  onSaveCampaign?: () => void;
+  saveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  lastSavedTime?: number | null;
+  initiative?: InitiativeState;
+  onNextTurn?: () => void;
+  onPrevTurn?: () => void;
+  onSetActiveTurnIndex?: (index: number) => void;
+  onToggleInitiativeVisibility?: () => void;
+  onAddInitiativeItem?: (item: Omit<InitiativeItem, 'id'>) => void;
+  onRemoveInitiativeItem?: (id: string) => void;
+  onUpdateInitiativeItem?: (id: string, patch: Partial<InitiativeItem>) => void;
+  onReorderInitiative?: (items: InitiativeItem[]) => void;
+  onSortInitiativeByValue?: (descending?: boolean) => void;
+  onClearInitiative?: () => void;
+  onAddNPCsToInitiative?: (npcs: NPC[]) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -49,6 +75,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   enableVignette,
   enableFilmGrain,
   enableScanlines,
+  enableBlur,
+  blurIntensity,
+  blurTarget,
   activeSpeakerId,
   backgroundUrl,
   isTransparentBg,
@@ -56,6 +85,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSetEnableVignette,
   onSetEnableFilmGrain,
   onSetEnableScanlines,
+  onSetEnableBlur,
+  onSetBlurIntensity,
+  onSetBlurTarget,
   onToggleSpeaker,
   onToggleStage,
   onDeleteNPC,
@@ -65,9 +97,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSetBackgroundUrl,
   onSetIsTransparentBg,
   onResetToDefaults,
-  onOpenGuide
+  onOpenGuide,
+  onSaveCampaign,
+  saveStatus,
+  lastSavedTime,
+  initiative,
+  onNextTurn,
+  onPrevTurn,
+  onSetActiveTurnIndex,
+  onToggleInitiativeVisibility,
+  onAddInitiativeItem,
+  onRemoveInitiativeItem,
+  onUpdateInitiativeItem,
+  onReorderInitiative,
+  onSortInitiativeByValue,
+  onClearInitiative,
+  onAddNPCsToInitiative
 }) => {
-  const [activeTab, setActiveTab] = useState<'npcs' | 'settings'>('npcs');
+  const [activeTab, setActiveTab] = useState<'npcs' | 'initiative' | 'settings' | 'soundboard'>('npcs');
   const [filter, setFilter] = useState<'all' | 'stage' | 'bench'>('all');
 
   const stageCount = npcs.filter(n => n.isOnStage).length;
@@ -102,6 +149,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => window.open('/controls', '_blank')}
+            className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-all"
+            title="Abrir Página de Controles em Nova Janela"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </button>
           <button
             onClick={onOpenGuide}
             className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all"
@@ -147,116 +201,180 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navegação por Abas */}
-      <div className="flex border-b border-zinc-800 px-3 pt-2 bg-black/20 font-mono">
+      <div className="flex border-b border-zinc-800 px-2 pt-2 bg-black/20 font-mono">
         <button
           onClick={() => setActiveTab('npcs')}
-          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all ${
+          className={`flex-1 py-2 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all ${
             activeTab === 'npcs'
               ? 'border-red-500 text-red-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-200'
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          <span>Personagens ({npcs.length})</span>
+          <span>Vozes</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('initiative')}
+          className={`flex-1 py-2 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+            activeTab === 'initiative'
+              ? 'border-red-500 text-red-400'
+              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <Swords className="w-3.5 h-3.5" />
+          <span>Iniciativa</span>
+          {initiative && initiative.items.length > 0 && (
+            <span className="px-1 py-0.2 rounded bg-black/60 text-[9px] text-red-400 font-bold">
+              {initiative.items.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all ${
+          className={`flex-1 py-2 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all ${
             activeTab === 'settings'
               ? 'border-red-500 text-red-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-200'
           }`}
         >
           <Sliders className="w-3.5 h-3.5" />
-          <span>Atmosfera & FX</span>
+          <span>Palco</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('soundboard')}
+          className={`flex-1 py-2 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+            activeTab === 'soundboard'
+              ? 'border-red-500 text-red-400'
+              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <Music className="w-3.5 h-3.5" />
+          <span>Músicas</span>
         </button>
       </div>
 
       {/* Conteúdo Principal */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-        {activeTab === 'npcs' ? (
-          <>
-            {/* Filtros da Lista */}
-            <div className="flex items-center gap-1.5 p-1 bg-black rounded-lg border border-zinc-800 text-[11px] font-mono">
+        {/* Aba 1: Personagens */}
+        <div className={activeTab === 'npcs' ? 'space-y-4' : 'hidden'}>
+          {/* Filtros da Lista */}
+          <div className="flex items-center gap-1.5 p-1 bg-black rounded-lg border border-zinc-800 text-[11px] font-mono">
+            <button
+              onClick={() => setFilter('all')}
+              className={`flex-1 py-1 px-2 rounded-md font-bold transition-all ${
+                filter === 'all'
+                  ? 'bg-zinc-800 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Todos ({npcs.length})
+            </button>
+            <button
+              onClick={() => setFilter('stage')}
+              className={`flex-1 py-1 px-2 rounded-md font-bold transition-all flex items-center justify-center gap-1 ${
+                filter === 'stage'
+                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <Eye className="w-3 h-3" />
+              <span>Em Cena ({stageCount})</span>
+            </button>
+            <button
+              onClick={() => setFilter('bench')}
+              className={`flex-1 py-1 px-2 rounded-md font-bold transition-all flex items-center justify-center gap-1 ${
+                filter === 'bench'
+                  ? 'bg-zinc-800 text-zinc-300'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <EyeOff className="w-3 h-3" />
+              <span>Banco ({benchCount})</span>
+            </button>
+          </div>
+
+          {/* Lista de Cards de NPCs */}
+          {filteredNpcs.length > 0 ? (
+            <div className="space-y-2.5">
+              {filteredNpcs.map(npc => (
+                <NPCCard
+                  key={npc.id}
+                  npc={npc}
+                  theme={theme}
+                  isActive={activeSpeakerId === npc.id}
+                  onToggleSpeaker={onToggleSpeaker}
+                  onToggleStage={onToggleStage}
+                  onEdit={onOpenEditModal}
+                  onDelete={onDeleteNPC}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center bg-black/40 rounded-2xl border border-dashed border-zinc-800 font-mono">
+              <p className="text-xs text-zinc-400 mb-3">Nenhum personagem nesta visualização.</p>
               <button
-                onClick={() => setFilter('all')}
-                className={`flex-1 py-1 px-2 rounded-md font-bold transition-all ${
-                  filter === 'all'
-                    ? 'bg-zinc-800 text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
+                onClick={onOpenCreateModal}
+                className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase rounded-lg transition-all"
               >
-                Todos ({npcs.length})
-              </button>
-              <button
-                onClick={() => setFilter('stage')}
-                className={`flex-1 py-1 px-2 rounded-md font-bold transition-all flex items-center justify-center gap-1 ${
-                  filter === 'stage'
-                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Eye className="w-3 h-3" />
-                <span>Em Cena ({stageCount})</span>
-              </button>
-              <button
-                onClick={() => setFilter('bench')}
-                className={`flex-1 py-1 px-2 rounded-md font-bold transition-all flex items-center justify-center gap-1 ${
-                  filter === 'bench'
-                    ? 'bg-zinc-800 text-zinc-300'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <EyeOff className="w-3 h-3" />
-                <span>Banco ({benchCount})</span>
+                Cadastrar Personagem
               </button>
             </div>
+          )}
+        </div>
 
-            {/* Lista de Cards de NPCs */}
-            {filteredNpcs.length > 0 ? (
-              <div className="space-y-2.5">
-                {filteredNpcs.map(npc => (
-                  <NPCCard
-                    key={npc.id}
-                    npc={npc}
-                    theme={theme}
-                    isActive={activeSpeakerId === npc.id}
-                    onToggleSpeaker={onToggleSpeaker}
-                    onToggleStage={onToggleStage}
-                    onEdit={onOpenEditModal}
-                    onDelete={onDeleteNPC}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center bg-black/40 rounded-2xl border border-dashed border-zinc-800 font-mono">
-                <p className="text-xs text-zinc-400 mb-3">Nenhum personagem nesta visualização.</p>
-                <button
-                  onClick={onOpenCreateModal}
-                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase rounded-lg transition-all"
-                >
-                  Cadastrar Personagem
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
+        {/* Aba 2: Palco e Ambiência */}
+        <div className={activeTab === 'settings' ? 'space-y-4' : 'hidden'}>
           <SettingsTab
             theme={theme}
             enableVignette={enableVignette}
             enableFilmGrain={enableFilmGrain}
             enableScanlines={enableScanlines}
+            enableBlur={enableBlur}
+            blurIntensity={blurIntensity}
+            blurTarget={blurTarget}
             backgroundUrl={backgroundUrl}
             isTransparentBg={isTransparentBg}
             onSetTheme={onSetTheme}
             onSetEnableVignette={onSetEnableVignette}
             onSetEnableFilmGrain={onSetEnableFilmGrain}
             onSetEnableScanlines={onSetEnableScanlines}
+            onSetEnableBlur={onSetEnableBlur}
+            onSetBlurIntensity={onSetBlurIntensity}
+            onSetBlurTarget={onSetBlurTarget}
             onSetBackgroundUrl={onSetBackgroundUrl}
             onSetIsTransparentBg={onSetIsTransparentBg}
             onResetToDefaults={onResetToDefaults}
+            onSaveCampaign={onSaveCampaign}
+            saveStatus={saveStatus}
+            lastSavedTime={lastSavedTime}
           />
-        )}
+        </div>
+
+        {/* Aba 3: Soundboard (Mantido vivo permanentemente para tocar em segundo plano) */}
+        <div className={activeTab === 'soundboard' ? 'space-y-4' : 'hidden'}>
+          <SoundboardTab />
+        </div>
+
+        {/* Aba 4: Iniciativa */}
+        <div className={activeTab === 'initiative' ? 'space-y-4' : 'hidden'}>
+          {initiative && (
+            <InitiativeTab
+              initiative={initiative}
+              npcs={npcs}
+              onNextTurn={onNextTurn || (() => {})}
+              onPrevTurn={onPrevTurn || (() => {})}
+              onSetActiveTurnIndex={onSetActiveTurnIndex || (() => {})}
+              onToggleVisibility={onToggleInitiativeVisibility || (() => {})}
+              onAddInitiativeItem={onAddInitiativeItem || (() => {})}
+              onRemoveInitiativeItem={onRemoveInitiativeItem || (() => {})}
+              onUpdateInitiativeItem={onUpdateInitiativeItem || (() => {})}
+              onReorderInitiative={onReorderInitiative || (() => {})}
+              onSortByValue={onSortInitiativeByValue || (() => {})}
+              onClearInitiative={onClearInitiative || (() => {})}
+              onAddNPCsToInitiative={onAddNPCsToInitiative || (() => {})}
+            />
+          )}
+        </div>
       </div>
 
       {/* Rodapé da Barra Lateral */}

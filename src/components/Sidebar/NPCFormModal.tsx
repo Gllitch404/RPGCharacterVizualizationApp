@@ -23,6 +23,8 @@ export const NPCFormModal: React.FC<NPCFormModalProps> = ({
   const [title, setTitle] = useState('');
   const [accentColor, setAccentColor] = useState('#e11d48');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [iconUrl, setIconUrl] = useState('');
+  const [isFullCardArt, setIsFullCardArt] = useState(false);
   const [shortcutKey, setShortcutKey] = useState('');
   const [isOnStage, setIsOnStage] = useState(true);
   const [isRecordingKey, setIsRecordingKey] = useState(false);
@@ -38,6 +40,8 @@ export const NPCFormModal: React.FC<NPCFormModalProps> = ({
       setTitle(editingNPC.title || '');
       setAccentColor(editingNPC.accentColor || '#e11d48');
       setAvatarUrl(editingNPC.avatarUrl);
+      setIconUrl(editingNPC.iconUrl || '');
+      setIsFullCardArt(editingNPC.isFullCardArt || false);
       setShortcutKey(editingNPC.shortcutKey);
       setIsOnStage(editingNPC.isOnStage);
       setActiveImageTab('url');
@@ -47,6 +51,8 @@ export const NPCFormModal: React.FC<NPCFormModalProps> = ({
       setTitle('');
       setAccentColor(PRESET_AVATARS[0].accentColor || '#e11d48');
       setAvatarUrl(PRESET_AVATARS[0].url);
+      setIconUrl('');
+      setIsFullCardArt(false);
       setShortcutKey('');
       setIsOnStage(true);
       setActiveImageTab('preset');
@@ -124,6 +130,8 @@ export const NPCFormModal: React.FC<NPCFormModalProps> = ({
         title: title.trim() || undefined,
         accentColor: accentColor || undefined,
         avatarUrl: avatarUrl.trim(),
+        iconUrl: iconUrl.trim() || undefined,
+        isFullCardArt,
         shortcutKey: shortcutKey.trim(),
         isOnStage
       },
@@ -384,6 +392,44 @@ export const NPCFormModal: React.FC<NPCFormModalProps> = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Configurações de Carta para Iniciativa & HUD */}
+          <div className="pt-2 border-t border-zinc-800/80 space-y-3">
+            <label className="block text-xs font-mono font-bold text-zinc-300 uppercase flex items-center justify-between">
+              <span>CARTA DE INICIATIVA & ÍCONE</span>
+              <span className="text-[10px] text-zinc-500 font-normal">Opcional</span>
+            </label>
+
+            {/* Checkbox para arte completa de carta vs molde com avatar */}
+            <label className="flex items-start gap-3 p-3 bg-zinc-900/60 rounded-xl border border-zinc-800 hover:border-zinc-700 cursor-pointer transition-all">
+              <input
+                type="checkbox"
+                checked={isFullCardArt}
+                onChange={e => setIsFullCardArt(e.target.checked)}
+                className="w-4 h-4 mt-0.5 text-red-600 rounded bg-zinc-950 border-zinc-700 focus:ring-red-500"
+              />
+              <div className="text-xs font-mono">
+                <span className="font-bold text-white block">Arte Completa de Carta (Vertical / TCG)</span>
+                <span className="text-zinc-400 text-[11px] leading-relaxed block">
+                  Marque se a imagem é uma ilustração vertical de carta inteira. Se desmarcado, o avatar quadrado será posicionado dentro do molde padrão de carta com moldura e nome.
+                </span>
+              </div>
+            </label>
+
+            {/* Ícone específico opcional para a iniciativa */}
+            <div>
+              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                Ícone/Arte Alternativa para a Iniciativa (se diferente do avatar principal):
+              </label>
+              <input
+                type="url"
+                value={iconUrl}
+                onChange={e => setIconUrl(e.target.value)}
+                placeholder="https://exemplo.com/icone-carta.png (Deixe vazio para usar o avatar)"
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 text-xs font-mono"
+              />
+            </div>
           </div>
 
           {/* Em Cena Toggle */}

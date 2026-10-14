@@ -6,16 +6,33 @@ interface ScreenFXProps {
   enableVignette: boolean;
   enableFilmGrain: boolean;
   enableScanlines: boolean;
+  enableBlur?: boolean;
+  blurIntensity?: number;
+  blurTarget?: 'background' | 'all';
 }
 
 export const ScreenFX: React.FC<ScreenFXProps> = ({
   theme,
   enableVignette,
   enableFilmGrain,
-  enableScanlines
+  enableScanlines,
+  enableBlur = false,
+  blurIntensity = 8,
+  blurTarget = 'background'
 }) => {
   return (
     <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+      {/* 0. Camada de Desfoque / Borrão de Imagem no Fundo (Bokeh / Profundidade de Campo) */}
+      {enableBlur && blurTarget === 'background' && (
+        <div
+          className="absolute inset-0 transition-all duration-500 pointer-events-none"
+          style={{
+            backdropFilter: `blur(${blurIntensity}px)`,
+            WebkitBackdropFilter: `blur(${blurIntensity}px)`,
+          }}
+        />
+      )}
+
       {/* 1. Camada de Vinheta Escura de Bordas */}
       {enableVignette && (
         <div

@@ -2,18 +2,25 @@ import React from 'react';
 import { StageConfig } from '../../types';
 import { NPCAvatar } from './NPCAvatar';
 import { ScreenFX } from './ScreenFX';
+import { InitiativeTrack } from './InitiativeTrack';
 import { Users } from 'lucide-react';
 
 interface StageProps {
   stageConfig: StageConfig;
   toggleSpeaker: (id: string) => void;
   onOpenSidebar?: () => void;
+  onSelectTurn?: (index: number) => void;
+  onNextTurn?: () => void;
+  onPrevTurn?: () => void;
 }
 
 export const Stage: React.FC<StageProps> = ({
   stageConfig,
   toggleSpeaker,
-  onOpenSidebar
+  onOpenSidebar,
+  onSelectTurn,
+  onNextTurn,
+  onPrevTurn
 }) => {
   const {
     backgroundUrl,
@@ -21,9 +28,13 @@ export const Stage: React.FC<StageProps> = ({
     enableVignette,
     enableFilmGrain,
     enableScanlines,
+    enableBlur,
+    blurIntensity,
+    blurTarget,
     activeSpeakerId,
     npcs,
-    isTransparentBg
+    isTransparentBg,
+    initiative
   } = stageConfig;
 
   // Filtrar apenas NPCs marcados como visíveis no palco
@@ -47,18 +58,31 @@ export const Stage: React.FC<StageProps> = ({
         <div className="absolute inset-0 z-0 bg-transparent" />
       )}
 
-      {/* 2. Camadas de Pós-Processamento da Tela (Vinheta, Scanlines CRT, Film Grain) */}
+      {/* 2. Camadas de Pós-Processamento da Tela (Vinheta, Scanlines CRT, Film Grain, Desfoque no Fundo) */}
       <ScreenFX
         theme={theme}
         enableVignette={enableVignette}
         enableFilmGrain={enableFilmGrain}
         enableScanlines={enableScanlines}
+        enableBlur={enableBlur}
+        blurIntensity={blurIntensity}
+        blurTarget={blurTarget}
       />
+
+      {/* 2.5 Trilha de Iniciativa & Cartas no Canto Superior */}
+      {initiative && (
+        <InitiativeTrack
+          initiative={initiative}
+          onSelectTurn={onSelectTurn}
+          onNextTurn={onNextTurn}
+          onPrevTurn={onPrevTurn}
+        />
+      )}
 
       {/* 3. Área dos Sprites de NPCs (Alinhados na base com estética Persona) */}
       <section
         aria-label="Palco dos Personagens"
-        className="relative z-30 w-full h-full min-h-screen flex items-end justify-center px-0 sm:px-4 pb-0 overflow-hidden pointer-events-auto"
+        className="relative z-30 w-full h-full min-h-screen flex items-end justify-center px-0 pb-0 overflow-hidden pointer-events-auto"
       >
         {stageNPCs.length > 0 ? (
           stageNPCs.map(npc => (
@@ -97,6 +121,17 @@ export const Stage: React.FC<StageProps> = ({
           </div>
         )}
       </section>
+
+      {/* 4. Overlay de Desfoque em Toda a Cena (Flashback / Sonho / Visão) */}
+      {enableBlur && blurTarget === 'all' && (
+        <div
+          className="absolute inset-0 z-35 pointer-events-none transition-all duration-500"
+          style={{
+            backdropFilter: `blur(${blurIntensity || 8}px)`,
+            WebkitBackdropFilter: `blur(${blurIntensity || 8}px)`
+          }}
+        />
+      )}
     </main>
   );
 };
